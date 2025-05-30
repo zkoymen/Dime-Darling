@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'SpendWise - Smart Budgeting',
+  title: 'Dime Darling - Smart Budgeting',
   description: 'Your personal finance companion for smart budgeting and expense tracking.',
 };
 

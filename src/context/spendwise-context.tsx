@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Transaction, Category, Budget, AppData } from '@/lib/types';
 import { PREDEFINED_CATEGORIES } from '@/lib/constants';
-import { format, startOfMonth, subMonths } from 'date-fns';
+// import { format, startOfMonth, subMonths } from 'date-fns'; // No longer needed for mock data generation here
 
 // Define the shape of the context data and methods
 interface SpendWiseContextType {
@@ -26,69 +26,7 @@ interface SpendWiseContextType {
 
 const SpendWiseContext = createContext<SpendWiseContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'spendwiseData';
-
-// Helper to generate mock transactions
-const generateMockTransactions = (categories: Category[]): Transaction[] => {
-  const today = new Date();
-  const mockTransactions: Transaction[] = [];
-  const numTransactions = 30; // Generate 30 mock transactions
-
-  for (let i = 0; i < numTransactions; i++) {
-    const date = subMonths(startOfMonth(today), Math.floor(i / 5)); // Spread transactions over last 6 months
-    const dayOffset = Math.floor(Math.random() * 28); // Random day within the month
-    date.setDate(dayOffset + 1);
-
-    const isExpense = Math.random() > 0.2; // 80% chance of expense
-    const availableCategories = isExpense
-      ? categories.filter(c => c.name.toLowerCase() !== 'salary' && c.name.toLowerCase() !== 'freelance income')
-      : categories.filter(c => c.name.toLowerCase() === 'salary' || c.name.toLowerCase() === 'freelance income');
-    
-    if (availableCategories.length === 0) continue;
-
-    const randomCategory = availableCategories[Math.floor(Math.random() * availableCategories.length)];
-    
-    mockTransactions.push({
-      id: crypto.randomUUID(),
-      date: format(date, "yyyy-MM-dd"),
-      description: `${isExpense ? 'Purchase' : 'Income'} ${i + 1} for ${randomCategory.name}`,
-      amount: parseFloat((Math.random() * (isExpense ? 200 : 3000) + 5).toFixed(2)) * (isExpense ? -1 : 1),
-      type: isExpense ? 'expense' : 'income',
-      categoryId: randomCategory.id,
-      notes: `Mock transaction note ${i + 1}`
-    });
-  }
-  return mockTransactions;
-};
-
-// Helper to generate mock budgets
-const generateMockBudgets = (categories: Category[], transactions: Transaction[]): Budget[] => {
-  const expenseCategories = categories.filter(c => c.name.toLowerCase() !== 'salary' && c.name.toLowerCase() !== 'freelance income');
-  const mockBudgets: Budget[] = [];
-  const numBudgets = Math.min(5, expenseCategories.length); // Create budgets for up to 5 categories
-
-  for (let i = 0; i < numBudgets; i++) {
-    const category = expenseCategories[i];
-    const limit = parseFloat((Math.random() * 500 + 100).toFixed(2)); // Random limit between 100 and 600
-    const startDate = format(startOfMonth(new Date()), "yyyy-MM-dd");
-    
-    // Calculate spent amount for this mock budget
-    const spent = transactions
-      .filter(t => t.categoryId === category.id && t.type === 'expense' && new Date(t.date) >= new Date(startDate))
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-
-    mockBudgets.push({
-      id: crypto.randomUUID(),
-      categoryId: category.id,
-      limit,
-      spent,
-      period: 'monthly',
-      startDate,
-    });
-  }
-  return mockBudgets;
-};
-
+const LOCAL_STORAGE_KEY = 'dimeDarlingData'; // Updated key to match new app name for fresh start
 
 export const SpendWiseProvider = ({ children }: { children: ReactNode }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -107,19 +45,17 @@ export const SpendWiseProvider = ({ children }: { children: ReactNode }) => {
         setCategories([...PREDEFINED_CATEGORIES, ...customCategories]);
         setBudgets(parsedData.budgets || []);
       } else {
-        // Initialize with mock data if no local storage data
-        const mockTxs = generateMockTransactions(PREDEFINED_CATEGORIES);
-        setTransactions(mockTxs);
-        setCategories(PREDEFINED_CATEGORIES); // Already set, but for clarity
-        setBudgets(generateMockBudgets(PREDEFINED_CATEGORIES, mockTxs));
+        // Initialize with a clean slate: empty transactions and budgets, only predefined categories
+        setTransactions([]);
+        setCategories(PREDEFINED_CATEGORIES);
+        setBudgets([]);
       }
     } catch (error) {
       console.error("Failed to load data from local storage", error);
-      // Fallback to mock data on error
-      const mockTxs = generateMockTransactions(PREDEFINED_CATEGORIES);
-      setTransactions(mockTxs);
+      // Fallback to clean slate on error
+      setTransactions([]);
       setCategories(PREDEFINED_CATEGORIES);
-      setBudgets(generateMockBudgets(PREDEFINED_CATEGORIES, mockTxs));
+      setBudgets([]);
     } finally {
       setIsLoading(false);
     }
@@ -127,13 +63,15 @@ export const SpendWiseProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!isLoading) { // Only save if not initial loading phase
-        const appData: AppData = { transactions, categories: categories.filter(c => !c.isPredefined), budgets };
+        // Save only custom categories to localStorage; predefined are constants
+        const customCategoriesToSave = categories.filter(c => !c.isPredefined);
+        const appData: AppData = { transactions, categories: customCategoriesToSave, budgets };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData));
     }
   }, [transactions, categories, budgets, isLoading]);
 
-  const addTransaction = (transaction: Transaction) => setTransactions(prev => [...prev, transaction]);
-  const updateTransaction = (updatedTransaction: Transaction) => setTransactions(prev => prev.map(t => t.id === updatedTransaction.id ? updatedTransaction : t));
+  const addTransaction = (transaction: Transaction) => setTransactions(prev => [...prev, transaction].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  const updateTransaction = (updatedTransaction: Transaction) => setTransactions(prev => prev.map(t => t.id === updatedTransaction.id ? updatedTransaction : t).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   const deleteTransaction = (id: string) => setTransactions(prev => prev.filter(t => t.id !== id));
   const getTransactionById = useCallback((id: string) => transactions.find(t => t.id === id), [transactions]);
 
@@ -165,6 +103,15 @@ export const SpendWiseProvider = ({ children }: { children: ReactNode }) => {
     return `Recent spending includes: ${summary}.`;
   }, [transactions, categories]);
 
+  // Sort transactions by date whenever they are set initially or updated
+  useEffect(() => {
+    if (transactions.length > 0) {
+      setTransactions(currentTransactions => 
+        [...currentTransactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      );
+    }
+  }, []); // Run once on mount to sort initial data if any
+
   return (
     <SpendWiseContext.Provider value={{ 
         transactions, categories, budgets, 
@@ -186,4 +133,3 @@ export const useSpendWise = (): SpendWiseContextType => {
   }
   return context;
 };
-
