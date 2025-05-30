@@ -1,3 +1,4 @@
+
 'use client';
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -5,13 +6,23 @@ import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/u
 import { useSpendWise } from '@/context/spendwise-context';
 import { PREDEFINED_CATEGORIES } from '@/lib/constants';
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
+import { Loader2 } from 'lucide-react';
 
 interface TrendChartProps {
   timeRange: string; // This would be used to filter transactions
 }
 
 export default function TrendChart({ timeRange }: TrendChartProps) {
-  const { transactions, categories: userCategories } = useSpendWise();
+  const { transactions, categories: userCategories, isLoading } = useSpendWise();
+  
+  if (isLoading) {
+    return (
+     <div className="flex items-center justify-center h-[300px]">
+       <Loader2 className="h-8 w-8 animate-spin text-primary" />
+     </div>
+   );
+ }
+
   const allCategories = [...PREDEFINED_CATEGORIES, ...userCategories.filter(uc => !PREDEFINED_CATEGORIES.find(pc => pc.id === uc.id))];
   
   const SPREAD = 6; // Number of months to show
@@ -54,7 +65,7 @@ export default function TrendChart({ timeRange }: TrendChartProps) {
     return monthData;
   });
 
-  if (topCategories.length === 0 || data.length === 0) {
+  if (topCategories.length === 0 || (data.length === 0 && !isLoading)) { // Check isLoading
     return (
      <div className="flex items-center justify-center h-[300px]">
        <p className="text-muted-foreground">Not enough data to display trends.</p>
@@ -64,9 +75,10 @@ export default function TrendChart({ timeRange }: TrendChartProps) {
 
 
   const chartConfig = topCategories.reduce((config, category, idx) => {
-    config[category.name] = {
+    const safeCategoryName = category.name.replace(/\s+/g, '-').toLowerCase(); // Make CSS var friendly
+    config[safeCategoryName] = { // Use safe name for config key
       label: category.name,
-      color: category.color || `hsl(var(--chart-${(idx % 5) + 1}))`, // Use predefined chart colors or category color
+      color: category.color || `hsl(var(--chart-${(idx % 5) + 1}))`, 
     };
     return config;
   }, {} as ChartConfig);
@@ -80,17 +92,21 @@ export default function TrendChart({ timeRange }: TrendChartProps) {
           <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
           <Tooltip content={<ChartTooltipContent />} />
           <Legend />
-          {topCategories.map(category => (
-            <Line 
-              key={category.id}
-              type="monotone" 
-              dataKey={category.name} 
-              stroke={`var(--color-${category.name.replace(/\s+/g, '-')})`} // CSS var friendly key
-              strokeWidth={2} 
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          ))}
+          {topCategories.map(category => {
+            const safeCategoryName = category.name.replace(/\s+/g, '-').toLowerCase();
+            return (
+              <Line 
+                key={category.id}
+                type="monotone" 
+                dataKey={category.name} // dataKey should match the key in `data` objects
+                name={category.name} // This is used by Legend and Tooltip
+                stroke={`var(--color-${safeCategoryName})`} 
+                strokeWidth={2} 
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            )
+          })}
         </LineChart>
       </ResponsiveContainer>
     </ChartContainer>

@@ -1,22 +1,31 @@
+
 'use client';
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit3, Trash2 } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Loader2 } from "lucide-react"; // Added Loader2
 import CategoryForm from "@/components/categories/category-form";
 import type { Category } from "@/lib/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Removed DialogFooter as it's not used
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getIconComponent, cn } from '@/lib/utils';
+import { getIconComponent } from '@/lib/utils'; // Removed cn as it's not used directly here
 import { useSpendWise } from '@/context/spendwise-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 
 
 export default function CategoriesPage() {
-  const { categories, addCategory, updateCategory, deleteCategory } = useSpendWise();
+  const { categories, addCategory, updateCategory, deleteCategory, isLoading } = useSpendWise(); // Added isLoading
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const handleAddCategory = () => {
     setEditingCategory(undefined);
@@ -61,10 +70,10 @@ export default function CategoriesPage() {
           <CardDescription>Custom and predefined categories for organizing your finances.</CardDescription>
         </CardHeader>
         <CardContent>
-          {categories.length === 0 ? (
+          {categories.length === 0 ? ( // This check is fine as categories initializes with predefined ones
             <p className="text-muted-foreground text-center py-8">No custom categories yet. Predefined categories are always available.</p>
           ) : (
-            <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height as needed */}
+            <ScrollArea className="h-[calc(100vh-20rem)]">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {categories.map((category) => {
                   const iconElement = getIconComponent(category.icon as any, { className: "h-5 w-5", style: { color: category.color || 'hsl(var(--foreground))' } });

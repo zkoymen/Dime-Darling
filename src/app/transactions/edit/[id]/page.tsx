@@ -1,3 +1,4 @@
+
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import TransactionForm from "@/components/transactions/transaction-form";
@@ -6,34 +7,37 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Transaction } from "@/lib/types";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button"; // Added import for Button
 
 export default function EditTransactionPage() {
   const router = useRouter();
   const params = useParams();
   const { id } = params;
-  const { transactions, getTransactionById } = useSpendWise(); // Assuming getTransactionById is added to context
+  const { transactions, getTransactionById, isLoading: isContextLoading } = useSpendWise();
   const [transaction, setTransaction] = useState<Transaction | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
-    if (id && transactions.length > 0) { // Check transactions populated from context
+    if (isContextLoading) {
+      setPageLoading(true); // Keep page loading if context is still loading
+      return;
+    }
+
+    // Context is loaded, now process to find the transaction
+    if (id) {
       const fetchedTransaction = getTransactionById(id as string);
       if (fetchedTransaction) {
         setTransaction(fetchedTransaction);
       } else {
-        // Handle transaction not found, maybe redirect or show error
-        // router.push('/transactions'); 
+        // Transaction not found after context loaded.
+        // console.log(`Transaction with id ${id} not found after context load.`);
       }
-      setLoading(false);
-    } else if (id && transactions.length === 0) {
-      // context might still be loading, wait for transactions to populate or fetch directly if needed
-      // For this example, we assume context loads quickly or has initial data.
-      // A more robust solution might involve a loading state in the context itself.
     }
-  }, [id, getTransactionById, router, transactions]);
+    setPageLoading(false); // Done with attempting to find the transaction for this effect run
+  }, [id, getTransactionById, transactions, isContextLoading, router]);
 
 
-  if (loading && !transaction) { // Show loader if still fetching or context data not yet available
+  if (isContextLoading || (pageLoading && !transaction && id)) { // Show loader if context is loading, or page is trying to load a specific transaction
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -41,7 +45,7 @@ export default function EditTransactionPage() {
     );
   }
 
-  if (!transaction && !loading) {
+  if (!transaction && !pageLoading && id) { // Context loaded, page processed, but specific transaction not found
      return (
       <div className="max-w-2xl mx-auto">
         <Card>
@@ -62,11 +66,19 @@ export default function EditTransactionPage() {
     <div className="max-w-2xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>Edit Transaction</CardTitle>
-          <CardDescription>Update the details of your transaction.</CardDescription>
+          <CardTitle>{transaction ? "Edit Transaction" : "Add New Transaction"}</CardTitle>
+          <CardDescription>
+            {transaction ? "Update the details of your transaction." : "Enter the details of your income or expense."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {transaction ? <TransactionForm existingTransaction={transaction} /> : <p>Loading transaction details...</p>}
+          {/* Render form only if transaction is loaded (for editing) or if no ID (for adding) */}
+          {/* And ensure page is not in a loading state for the transaction itself */}
+          {(transaction && !pageLoading) || !id ? (
+            <TransactionForm existingTransaction={transaction} />
+          ) : (
+            <p>Loading transaction details...</p>
+          )}
         </CardContent>
       </Card>
     </div>

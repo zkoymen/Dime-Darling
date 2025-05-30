@@ -1,3 +1,4 @@
+
 'use client';
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,11 +6,20 @@ import { PREDEFINED_CATEGORIES, CURRENCY_SYMBOL } from "@/lib/constants";
 import type { Budget } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSpendWise } from "@/context/spendwise-context";
+import { Loader2 } from "lucide-react";
 
 export default function BudgetOverview() {
-  const { budgets, categories } = useSpendWise();
+  const { budgets, categories, isLoading } = useSpendWise();
 
-  if (budgets.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (budgets.length === 0 && !isLoading) {
     return <p className="text-sm text-muted-foreground">No budgets set yet. <a href="/budgets" className="text-primary hover:underline">Create one now!</a></p>;
   }
 

@@ -1,14 +1,23 @@
+
 'use client';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PREDEFINED_CATEGORIES, CURRENCY_SYMBOL } from "@/lib/constants";
-import type { Transaction } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getIconComponent } from '@/lib/utils';
 import { useSpendWise } from "@/context/spendwise-context";
+import { Loader2 } from "lucide-react";
 
 export default function RecentTransactions() {
-  const { transactions, categories } = useSpendWise();
+  const { transactions, categories, isLoading } = useSpendWise();
   
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[350px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   // Get last 5 transactions
   const recent = transactions.slice(-5).reverse();
 
@@ -22,11 +31,7 @@ export default function RecentTransactions() {
         {recent.length === 0 && <p className="text-sm text-muted-foreground">No transactions yet.</p>}
         {recent.map((transaction) => {
           const category = getCategoryInfo(transaction.categoryId);
-          const iconProps = {
-            className: "h-5 w-5",
-            style: { color: category?.color || 'hsl(var(--foreground))' }
-          };
-          const iconElement = category ? getIconComponent(category.icon as any, iconProps) : null;
+          const iconElement = category ? getIconComponent(category.icon as any, { className: "h-5 w-5", style: { color: category?.color || 'hsl(var(--foreground))' }}) : null;
           const initials = category ? category.name.substring(0, 2).toUpperCase() : '??';
 
           return (

@@ -1,11 +1,12 @@
+
 'use client';
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { PlusCircle, Edit3, Trash2, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, AlertTriangle, Loader2 } from "lucide-react"; // Added Loader2
 import BudgetForm from "@/components/budgets/budget-form";
-import type { Budget, Category } from "@/lib/types";
+import type { Budget } from "@/lib/types"; // Removed unused Category import
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { PREDEFINED_CATEGORIES, CURRENCY_SYMBOL } from "@/lib/constants";
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,11 +16,20 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 
 export default function BudgetsPage() {
-  const { budgets, categories: userCategories, addBudget, updateBudget, deleteBudget, transactions } = useSpendWise();
-  const allCategories = [...PREDEFINED_CATEGORIES, ...userCategories.filter(uc => !PREDEFINED_CATEGORIES.find(pc => pc.id === uc.id))];
-
+  const { budgets, categories: userCategories, addBudget, updateBudget, deleteBudget, transactions, isLoading } = useSpendWise(); // Added isLoading
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | undefined>(undefined);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const allCategories = [...PREDEFINED_CATEGORIES, ...userCategories.filter(uc => !PREDEFINED_CATEGORIES.find(pc => pc.id === uc.id))];
 
   const handleAddBudget = () => {
     setEditingBudget(undefined);
@@ -47,11 +57,9 @@ export default function BudgetsPage() {
     setEditingBudget(undefined);
   };
 
-  // Recalculate spent amounts when transactions change
-  // This is a simplified calculation. Real app would filter by date range more precisely.
   const calculateSpentForBudget = (categoryId: string, startDate: string, endDate?: string): number => {
     const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : new Date(start.getFullYear(), start.getMonth() + 1, 0); // End of month if no end date
+    const end = endDate ? new Date(endDate) : new Date(start.getFullYear(), start.getMonth() + 1, 0); 
 
     return transactions
       .filter(t => 
@@ -91,7 +99,7 @@ export default function BudgetsPage() {
           {displayBudgets.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No budgets set yet. Start by adding one!</p>
           ) : (
-            <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height as needed */}
+            <ScrollArea className="h-[calc(100vh-20rem)]">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayBudgets.map((budget) => {
                   const category = allCategories.find(c => c.id === budget.categoryId);

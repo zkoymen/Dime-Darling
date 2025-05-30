@@ -1,10 +1,11 @@
+
 'use client';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useSpendWise } from '@/context/spendwise-context';
 import { PREDEFINED_CATEGORIES } from '@/lib/constants';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Loader2 } from 'lucide-react';
 
 // Helper to generate distinct colors if not defined or for many categories
 const generateColors = (numColors: number): string[] => {
@@ -22,7 +23,16 @@ interface CategoryPieChartProps {
 }
 
 export default function CategoryPieChart({ timeRange }: CategoryPieChartProps) {
-  const { transactions, categories: userCategories } = useSpendWise();
+  const { transactions, categories: userCategories, isLoading } = useSpendWise();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[300px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   const allCategories = [...PREDEFINED_CATEGORIES, ...userCategories.filter(uc => !PREDEFINED_CATEGORIES.find(pc => pc.id === uc.id))];
 
   // Filter transactions by timeRange (simplified for this example)

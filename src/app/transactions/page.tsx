@@ -1,13 +1,22 @@
+
 'use client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import TransactionTable from "@/components/transactions/transaction-table";
 import Link from "next/link";
-import { PlusCircle, Download } from "lucide-react";
+import { PlusCircle, Download, Loader2 } from "lucide-react"; // Added Loader2
 import { useSpendWise } from "@/context/spendwise-context";
 
 export default function TransactionsPage() {
-  const { transactions, categories, deleteTransaction } = useSpendWise();
+  const { transactions, categories, deleteTransaction, isLoading } = useSpendWise(); // Added isLoading
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

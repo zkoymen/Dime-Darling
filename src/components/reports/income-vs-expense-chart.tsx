@@ -1,16 +1,26 @@
+
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, LineChart, ComposedChart } from 'recharts';
+import { CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useSpendWise } from '@/context/spendwise-context';
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
+import { Loader2 } from 'lucide-react';
 
 interface IncomeVsExpenseChartProps {
   timeRange: string; // This would be used to filter transactions
 }
 
 export default function IncomeVsExpenseChart({ timeRange }: IncomeVsExpenseChartProps) {
-  const { transactions } = useSpendWise();
+  const { transactions, isLoading } = useSpendWise();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[300px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // This is a simplified data aggregation for the last 6 months.
   // A real implementation would use timeRange to define the interval.
@@ -39,7 +49,7 @@ export default function IncomeVsExpenseChart({ timeRange }: IncomeVsExpenseChart
     return { name: monthLabel, income, expenses, net: income - expenses };
   });
 
-  if (data.length === 0) {
+  if (data.length === 0 && !isLoading) { // Check isLoading before concluding no data
      return (
       <div className="flex items-center justify-center h-[300px]">
         <p className="text-muted-foreground">No data available for this period.</p>
