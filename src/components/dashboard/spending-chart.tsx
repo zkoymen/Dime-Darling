@@ -4,7 +4,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts"
 import { ChartTooltipContent, ChartContainer, type ChartConfig } from "@/components/ui/chart"
 import { useSpendWise } from '@/context/spendwise-context';
-import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, startOfDay } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, startOfDay, endOfDay } from 'date-fns'; // Added endOfDay
 import { Loader2 } from 'lucide-react';
 import { PREDEFINED_CATEGORIES, CURRENCY_SYMBOL } from "@/lib/constants";
 
