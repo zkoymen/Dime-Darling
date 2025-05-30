@@ -43,14 +43,14 @@ export default function TransactionTable({ transactions, categories: userCategor
         <TableBody>
           {transactions.map((transaction) => {
             const category = getCategoryInfo(transaction.categoryId);
-            const IconComponent = category ? getIconComponent(category.icon as any) : null;
+            const iconElement = category ? getIconComponent(category.icon as any, { className: "h-4 w-4", style: { color: category?.color } }) : null;
             return (
               <TableRow key={transaction.id}>
                 <TableCell>{format(new Date(transaction.date), "MMM d, yyyy")}</TableCell>
                 <TableCell className="font-medium">{transaction.description}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    {IconComponent && <IconComponent className="h-4 w-4" style={{ color: category?.color }} />}
+                    {iconElement}
                     <span>{category?.name || 'Uncategorized'}</span>
                   </div>
                 </TableCell>

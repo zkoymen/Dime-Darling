@@ -95,7 +95,7 @@ export default function BudgetsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayBudgets.map((budget) => {
                   const category = allCategories.find(c => c.id === budget.categoryId);
-                  const IconComponent = category ? getIconComponent(category.icon as any) : null;
+                  const iconElement = category ? getIconComponent(category.icon as any, { className: "h-5 w-5", style: { color: category?.color || 'hsl(var(--foreground))' } }) : null;
                   const progressValue = budget.limit > 0 ? (budget.spent / budget.limit) * 100 : 0;
                   const isOverspent = progressValue > 100;
 
@@ -103,7 +103,7 @@ export default function BudgetsPage() {
                     <Card key={budget.id} className={`shadow-sm hover:shadow-md transition-shadow ${isOverspent ? 'border-destructive' : ''}`}>
                       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                         <div className="flex items-center gap-2">
-                          {IconComponent && <IconComponent className="h-5 w-5" style={{ color: category?.color || 'hsl(var(--foreground))' }} />}
+                          {iconElement}
                           <CardTitle className="text-base font-medium">{category?.name || 'Uncategorized Budget'}</CardTitle>
                         </div>
                         <div className="flex gap-1">

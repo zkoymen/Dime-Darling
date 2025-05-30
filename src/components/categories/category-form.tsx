@@ -97,7 +97,7 @@ export default function CategoryForm({ onSubmit, existingCategory }: CategoryFor
                         <CommandEmpty>No icon found.</CommandEmpty>
                         <CommandGroup>
                           {iconNames.map((iconName) => {
-                            const Icon = getIconComponent(iconName as any);
+                            const iconElement = getIconComponent(iconName as any, { className: "mr-2 h-4 w-4" });
                             return (
                               <CommandItem
                                 value={iconName}
@@ -109,7 +109,7 @@ export default function CategoryForm({ onSubmit, existingCategory }: CategoryFor
                                 <Check
                                   className={cn("mr-2 h-4 w-4", iconName === field.value ? "opacity-100" : "opacity-0")}
                                 />
-                                {Icon && <Icon className="mr-2 h-4 w-4" />}
+                                {iconElement}
                                 {iconName}
                               </CommandItem>
                             );

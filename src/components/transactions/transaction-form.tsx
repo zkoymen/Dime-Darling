@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Check, ChevronsUpDown, Sparkles, Lightbulb } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, Sparkles, Lightbulb, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -80,10 +80,15 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
       setAvailableCategories(expenseCategories);
     }
     // Reset category if it's not valid for the new type
-    if (!availableCategories.find(cat => cat.id === form.getValues("categoryId"))) {
-       form.setValue("categoryId", "");
+    const currentCategoryId = form.getValues("categoryId");
+    if (currentCategoryId && !availableCategories.find(cat => cat.id === currentCategoryId)) {
+       form.setValue("categoryId", "", { shouldValidate: true });
+    } else if (currentCategoryId && availableCategories.find(cat => cat.id === currentCategoryId)){
+      // No need to reset if current category is still valid
+    } else {
+      form.setValue("categoryId", "", { shouldValidate: true });
     }
-  }, [transactionType, form, incomeCategories, expenseCategories, availableCategories]);
+  }, [transactionType, form, incomeCategories, expenseCategories]); // Removed availableCategories from dep array as it causes re-runs itself
 
 
   async function onSubmit(data: TransactionFormValues) {
@@ -267,7 +272,7 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
                           <CommandEmpty>No category found.</CommandEmpty>
                           <CommandGroup>
                             {availableCategories.map((cat) => {
-                              const Icon = getIconComponent(cat.icon as any);
+                              const iconElement = getIconComponent(cat.icon as any, { className: "mr-2 h-4 w-4", style:{color: cat.color}});
                               return (
                                 <CommandItem
                                   value={cat.name}
@@ -282,7 +287,7 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
                                       cat.id === field.value ? "opacity-100" : "opacity-0"
                                     )}
                                   />
-                                  {Icon && <Icon className="mr-2 h-4 w-4" style={{color: cat.color}}/>}
+                                  {iconElement}
                                   {cat.name}
                                 </CommandItem>
                               );

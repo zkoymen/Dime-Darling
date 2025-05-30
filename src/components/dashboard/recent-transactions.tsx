@@ -22,15 +22,19 @@ export default function RecentTransactions() {
         {recent.length === 0 && <p className="text-sm text-muted-foreground">No transactions yet.</p>}
         {recent.map((transaction) => {
           const category = getCategoryInfo(transaction.categoryId);
-          const IconComponent = category ? getIconComponent(category.icon as any) : null;
+          const iconProps = {
+            className: "h-5 w-5",
+            style: { color: category?.color || 'hsl(var(--foreground))' }
+          };
+          const iconElement = category ? getIconComponent(category.icon as any, iconProps) : null;
           const initials = category ? category.name.substring(0, 2).toUpperCase() : '??';
 
           return (
             <div key={transaction.id} className="flex items-center p-1 rounded-md hover:bg-muted/50 transition-colors">
               <Avatar className="h-9 w-9">
-                {IconComponent ? (
+                {iconElement ? (
                   <div className="flex h-full w-full items-center justify-center rounded-full" style={{ backgroundColor: category?.color ? `${category.color}33` : 'hsl(var(--muted))' }}>
-                     <IconComponent className="h-5 w-5" style={{ color: category?.color || 'hsl(var(--foreground))' }} />
+                     {iconElement}
                   </div>
                 ) : (
                   <AvatarFallback style={{ backgroundColor: category?.color ? `${category.color}33` : 'hsl(var(--muted))', color: category?.color || 'hsl(var(--foreground))' }}>

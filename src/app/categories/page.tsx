@@ -10,6 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { getIconComponent, cn } from '@/lib/utils';
 import { useSpendWise } from '@/context/spendwise-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from '@/components/ui/badge';
+
 
 export default function CategoriesPage() {
   const { categories, addCategory, updateCategory, deleteCategory } = useSpendWise();
@@ -65,12 +67,12 @@ export default function CategoriesPage() {
             <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height as needed */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {categories.map((category) => {
-                  const IconComponent = getIconComponent(category.icon as any);
+                  const iconElement = getIconComponent(category.icon as any, { className: "h-5 w-5", style: { color: category.color || 'hsl(var(--foreground))' } });
                   return (
                     <Card key={category.id} className="flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                          <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          {IconComponent && <IconComponent className="h-5 w-5" style={{ color: category.color || 'hsl(var(--foreground))' }} />}
+                          {iconElement}
                           {category.name}
                         </CardTitle>
                         {!category.isPredefined && (

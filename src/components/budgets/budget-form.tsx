@@ -116,7 +116,7 @@ export default function BudgetForm({ onSubmit, existingBudget, categories }: Bud
                       <CommandEmpty>No category found.</CommandEmpty>
                       <CommandGroup>
                         {categories.map((cat) => {
-                          const Icon = getIconComponent(cat.icon as any);
+                          const iconElement = getIconComponent(cat.icon as any, { className: "mr-2 h-4 w-4", style: {color: cat.color}});
                           return (
                             <CommandItem
                               value={cat.name}
@@ -128,7 +128,7 @@ export default function BudgetForm({ onSubmit, existingBudget, categories }: Bud
                               <Check
                                 className={cn("mr-2 h-4 w-4", cat.id === field.value ? "opacity-100" : "opacity-0")}
                               />
-                              {Icon && <Icon className="mr-2 h-4 w-4" style={{color: cat.color}} />}
+                              {iconElement}
                               {cat.name}
                             </CommandItem>
                           );
