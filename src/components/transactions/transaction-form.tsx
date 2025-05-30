@@ -1,3 +1,4 @@
+
 'use client';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -17,7 +18,7 @@ import type { Transaction, Category, CategorizationSuggestion } from "@/lib/type
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { categorizeExpense } from "@/ai/flows/categorize-expense";
 import { useSpendWise } from "@/context/spendwise-context";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -42,11 +43,26 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
   const { toast } = useToast();
   const { categories: userCategories, addTransaction, updateTransaction, getPastSpendingSummary } = useSpendWise();
   
-  const allCategories = [...PREDEFINED_CATEGORIES, ...userCategories.filter(uc => !PREDEFINED_CATEGORIES.find(pc => pc.id === uc.id))];
-  const expenseCategories = allCategories.filter(c => c.name.toLowerCase() !== 'salary' && c.name.toLowerCase() !== 'freelance income'); // Basic filter
-  const incomeCategories = allCategories.filter(c => c.name.toLowerCase() === 'salary' || c.name.toLowerCase() === 'freelance income');
+  const allCategories = useMemo(() => {
+    return [...PREDEFINED_CATEGORIES, ...userCategories.filter(uc => !PREDEFINED_CATEGORIES.find(pc => pc.id === uc.id))];
+  }, [userCategories]);
 
-  const [availableCategories, setAvailableCategories] = useState(expenseCategories);
+  const memoizedExpenseCategories = useMemo(() => {
+    return allCategories.filter(c => c.name.toLowerCase() !== 'salary' && c.name.toLowerCase() !== 'freelance income');
+  }, [allCategories]);
+
+  const memoizedIncomeCategories = useMemo(() => {
+    return allCategories.filter(c => c.name.toLowerCase() === 'salary' || c.name.toLowerCase() === 'freelance income');
+  }, [allCategories]);
+
+  const [availableCategories, setAvailableCategories] = useState<Category[]>(() => {
+    // Initialize based on existing transaction type or default to expense
+    if (existingTransaction) {
+      return existingTransaction.type === 'income' ? memoizedIncomeCategories : memoizedExpenseCategories;
+    }
+    return memoizedExpenseCategories;
+  });
+
   const [isSmartCategorizeOpen, setIsSmartCategorizeOpen] = useState(false);
   const [suggestion, setSuggestion] = useState<CategorizationSuggestion | null>(null);
   const [isCategorizing, setIsCategorizing] = useState(false);
@@ -64,7 +80,7 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
           description: "",
           amount: 0,
           date: new Date(),
-          type: "expense",
+          type: "expense", // Default type
           categoryId: "",
           notes: "",
         },
@@ -74,21 +90,21 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
   const transactionDescription = form.watch("description");
 
   useEffect(() => {
-    if (transactionType === "income") {
-      setAvailableCategories(incomeCategories);
-    } else {
-      setAvailableCategories(expenseCategories);
-    }
-    // Reset category if it's not valid for the new type
+    const newCats = transactionType === "income" ? memoizedIncomeCategories : memoizedExpenseCategories;
+    setAvailableCategories(newCats);
+
     const currentCategoryId = form.getValues("categoryId");
-    if (currentCategoryId && !availableCategories.find(cat => cat.id === currentCategoryId)) {
-       form.setValue("categoryId", "", { shouldValidate: true });
-    } else if (currentCategoryId && availableCategories.find(cat => cat.id === currentCategoryId)){
-      // No need to reset if current category is still valid
-    } else {
-      form.setValue("categoryId", "", { shouldValidate: true });
+    if (currentCategoryId) { // Only act if a category is currently selected
+      const isCategoryStillValid = newCats.some(cat => cat.id === currentCategoryId);
+      if (!isCategoryStillValid) {
+        // If the selected category is no longer in the new list of available categories, reset it.
+        form.setValue("categoryId", "", { shouldValidate: true });
+      }
+      // If it IS valid, do nothing, leave it selected.
     }
-  }, [transactionType, form, incomeCategories, expenseCategories]); // Removed availableCategories from dep array as it causes re-runs itself
+    // If currentCategoryId is already empty (""), do nothing in this effect to avoid setValue("","") loops.
+    // The user can select a category from the new `availableCategories` list.
+  }, [transactionType, form, memoizedIncomeCategories, memoizedExpenseCategories]);
 
 
   async function onSubmit(data: TransactionFormValues) {
@@ -117,8 +133,8 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
     setIsCategorizing(true);
     setSuggestion(null);
     try {
-      const pastSpendingHabits = getPastSpendingSummary(); // Get summary from context
-      const predefinedCatNames = expenseCategories.map(c => c.name);
+      const pastSpendingHabits = getPastSpendingSummary();
+      const predefinedCatNames = memoizedExpenseCategories.map(c => c.name);
       
       const result = await categorizeExpense({
         transactionDescription,
@@ -138,14 +154,16 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
   
   const applySuggestion = () => {
     if (suggestion) {
-      const suggestedCat = expenseCategories.find(c => c.name === suggestion.suggestedCategory);
+      // Ensure we're applying to expense categories if that was the context of suggestion
+      const targetCategories = transactionType === 'expense' ? memoizedExpenseCategories : memoizedIncomeCategories;
+      const suggestedCat = targetCategories.find(c => c.name === suggestion.suggestedCategory);
       if (suggestedCat) {
         form.setValue("categoryId", suggestedCat.id, { shouldValidate: true });
         toast({ title: "Suggestion Applied!", description: `Category set to ${suggestedCat.name}.`});
         setShowSuggestionApplied(true);
-        setTimeout(() => setShowSuggestionApplied(false), 3000); // Hide message after 3s
+        setTimeout(() => setShowSuggestionApplied(false), 3000);
       } else {
-         toast({ title: "Category Not Found", description: `Suggested category "${suggestion.suggestedCategory}" not in your list.`, variant: "destructive" });
+         toast({ title: "Category Not Found", description: `Suggested category "${suggestion.suggestedCategory}" not in your current list for this transaction type.`, variant: "destructive" });
       }
     }
     setIsSmartCategorizeOpen(false);
@@ -269,7 +287,7 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
                        <Command>
                         <CommandInput placeholder="Search category..." />
                         <CommandList>
-                          <CommandEmpty>No category found.</CommandEmpty>
+                          <CommandEmpty>No category found for this type.</CommandEmpty>
                           <CommandGroup>
                             {availableCategories.map((cat) => {
                               const iconElement = getIconComponent(cat.icon as any, { className: "mr-2 h-4 w-4", style:{color: cat.color}});
@@ -362,3 +380,5 @@ export default function TransactionForm({ existingTransaction }: TransactionForm
     </>
   );
 }
+
+    
