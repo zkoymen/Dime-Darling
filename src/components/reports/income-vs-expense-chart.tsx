@@ -4,11 +4,36 @@
 import { CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useSpendWise } from '@/context/spendwise-context';
-import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
+import { format, subDays, subMonths, startOfYear, endOfDay, startOfMonth, endOfMonth, eachMonthOfInterval, startOfDay } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
+const getDateRangeLimits = (timeRange: string): { startDateLimit: Date; endDateLimit: Date } => {
+  const now = endOfDay(new Date());
+  let startDateLimit: Date;
+
+  switch (timeRange) {
+    case 'last30days':
+      startDateLimit = startOfDay(subDays(now, 29));
+      break;
+    case 'last3months':
+      startDateLimit = startOfDay(subMonths(now, 3));
+      break;
+    case 'last6months':
+      startDateLimit = startOfDay(subMonths(now, 6));
+      break;
+    case 'thisyear':
+      startDateLimit = startOfDay(startOfYear(now));
+      break;
+    case 'alltime':
+    default:
+      startDateLimit = new Date(1970, 0, 1); // A very early date for "all time"
+      break;
+  }
+  return { startDateLimit, endDateLimit: now };
+};
+
 interface IncomeVsExpenseChartProps {
-  timeRange: string; // This would be used to filter transactions
+  timeRange: string;
 }
 
 export default function IncomeVsExpenseChart({ timeRange }: IncomeVsExpenseChartProps) {
@@ -22,23 +47,53 @@ export default function IncomeVsExpenseChart({ timeRange }: IncomeVsExpenseChart
     );
   }
 
-  // This is a simplified data aggregation for the last 6 months.
-  // A real implementation would use timeRange to define the interval.
-  const SPREAD = 6; // Number of months to show
-  const end = new Date();
-  const start = subMonths(startOfMonth(new Date()), SPREAD -1);
-  const monthsInterval = eachMonthOfInterval({ start, end });
+  const { startDateLimit, endDateLimit } = getDateRangeLimits(timeRange);
 
-  const data = monthsInterval.map(monthStart => {
-    const monthEnd = endOfMonth(monthStart);
-    const monthLabel = format(monthStart, 'MMM yyyy');
+  const relevantTransactions = transactions.filter(t => {
+    const tDate = startOfDay(new Date(t.date));
+    return tDate >= startDateLimit && tDate <= endDateLimit;
+  });
+
+  if (relevantTransactions.length === 0 && !isLoading) {
+     return (
+      <div className="flex items-center justify-center h-[300px]">
+        <p className="text-muted-foreground">No data available for this period.</p>
+      </div>
+    );
+  }
+  
+  let effectiveStartForInterval = startDateLimit;
+  if (relevantTransactions.length > 0) {
+    const firstTransactionDate = relevantTransactions.reduce((earliest, current) => {
+        const currentDate = startOfDay(new Date(current.date));
+        return currentDate < earliest ? currentDate : earliest;
+    }, endOfDay(new Date()) ); // Initialize with a late date
+    // Ensure effectiveStartForInterval is not later than startDateLimit, and aligns with actual data or the desired range start.
+    effectiveStartForInterval = firstTransactionDate > startDateLimit && firstTransactionDate < endDateLimit ? firstTransactionDate : startDateLimit;
+  }
+  // Align to start of month for monthly bucketing, or use the direct start date if range is small (e.g., last30days)
+  const isShortRange = timeRange === 'last30days'; // Example: decide if daily/weekly aggregation is better
+  
+  // For simplicity, we'll stick to monthly intervals for now.
+  // A more advanced version could switch to daily/weekly for shorter timeRanges.
+  const intervalStart = startOfMonth(effectiveStartForInterval < startDateLimit ? startDateLimit : effectiveStartForInterval);
+
+  const monthsInterval = eachMonthOfInterval({
+    start: intervalStart,
+    end: endDateLimit,
+  });
+
+  const data = monthsInterval.map(monthBucketStart => {
+    const monthBucketEnd = endOfMonth(monthBucketStart);
+    const monthLabel = format(monthBucketStart, 'MMM yy'); // Changed format slightly for clarity
     
     let income = 0;
     let expenses = 0;
 
-    transactions.forEach(t => {
-      const tDate = new Date(t.date);
-      if (tDate >= monthStart && tDate <= monthEnd) {
+    relevantTransactions.forEach(t => {
+      const tDate = startOfDay(new Date(t.date));
+      // Ensure transaction falls within the current month bucket
+      if (tDate >= monthBucketStart && tDate <= monthBucketEnd) {
         if (t.type === 'income') {
           income += t.amount;
         } else {
@@ -47,15 +102,16 @@ export default function IncomeVsExpenseChart({ timeRange }: IncomeVsExpenseChart
       }
     });
     return { name: monthLabel, income, expenses, net: income - expenses };
-  });
+  }).filter(d => d.income > 0 || d.expenses > 0); // Only show months with activity
 
-  if (data.length === 0 && !isLoading) { // Check isLoading before concluding no data
+   if (data.length === 0 && !isLoading) {
      return (
       <div className="flex items-center justify-center h-[300px]">
-        <p className="text-muted-foreground">No data available for this period.</p>
+        <p className="text-muted-foreground">No aggregated data to display for this period.</p>
       </div>
     );
   }
+
 
   const chartConfig = {
     income: { label: "Income", color: "hsl(var(--chart-1))" },

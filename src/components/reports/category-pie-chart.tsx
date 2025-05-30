@@ -6,20 +6,45 @@ import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/u
 import { useSpendWise } from '@/context/spendwise-context';
 import { PREDEFINED_CATEGORIES } from '@/lib/constants';
 import { Loader2 } from 'lucide-react';
+import { subDays, subMonths, startOfYear, endOfDay, startOfDay } from 'date-fns';
 
 // Helper to generate distinct colors if not defined or for many categories
 const generateColors = (numColors: number): string[] => {
   const colors: string[] = [];
   for (let i = 0; i < numColors; i++) {
-    // Simple HSL based color generation
+    // Simple HSL based color generation, could be more sophisticated
     colors.push(`hsl(${ (i * (360 / Math.max(numColors,10))) % 360}, 70%, 60%)`);
   }
   return colors;
 };
 
+const getDateRangeLimits = (timeRange: string): { startDateLimit: Date; endDateLimit: Date } => {
+  const now = endOfDay(new Date());
+  let startDateLimit: Date;
+
+  switch (timeRange) {
+    case 'last30days':
+      startDateLimit = startOfDay(subDays(now, 29)); // Inclusive of today
+      break;
+    case 'last3months':
+      startDateLimit = startOfDay(subMonths(now, 3));
+      break;
+    case 'last6months':
+      startDateLimit = startOfDay(subMonths(now, 6));
+      break;
+    case 'thisyear':
+      startDateLimit = startOfDay(startOfYear(now));
+      break;
+    case 'alltime':
+    default:
+      startDateLimit = new Date(0); // Epoch
+      break;
+  }
+  return { startDateLimit, endDateLimit: now };
+};
 
 interface CategoryPieChartProps {
-  timeRange: string; // This would be used to filter transactions
+  timeRange: string;
 }
 
 export default function CategoryPieChart({ timeRange }: CategoryPieChartProps) {
@@ -34,10 +59,12 @@ export default function CategoryPieChart({ timeRange }: CategoryPieChartProps) {
   }
 
   const allCategories = [...PREDEFINED_CATEGORIES, ...userCategories.filter(uc => !PREDEFINED_CATEGORIES.find(pc => pc.id === uc.id))];
+  const { startDateLimit, endDateLimit } = getDateRangeLimits(timeRange);
 
-  // Filter transactions by timeRange (simplified for this example)
-  // A real implementation would parse timeRange and filter dates accordingly
-  const filteredTransactions = transactions.filter(t => t.type === 'expense');
+  const filteredTransactions = transactions.filter(t => {
+    const tDate = startOfDay(new Date(t.date));
+    return t.type === 'expense' && tDate >= startDateLimit && tDate <= endDateLimit;
+  });
 
   const dataMap = new Map<string, number>();
   filteredTransactions.forEach(t => {
@@ -49,7 +76,7 @@ export default function CategoryPieChart({ timeRange }: CategoryPieChartProps) {
     }
   });
 
-  const chartData = Array.from(dataMap.entries()).map(([name, value]) => ({ name, value }));
+  const chartData = Array.from(dataMap.entries()).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
 
   if (chartData.length === 0) {
     return (
@@ -63,9 +90,13 @@ export default function CategoryPieChart({ timeRange }: CategoryPieChartProps) {
 
   const chartConfig = chartData.reduce((acc, entry, index) => {
     const categoryDetails = allCategories.find(c => c.name === entry.name);
+    // Use chart theme colors first, then fallback to generated or category color
+    const themeColorVar = `--chart-${(index % 5) + 1}`; // Cycle through 5 theme chart colors
+    const themeColor = `hsl(var(${themeColorVar}))`;
+
     acc[entry.name] = {
       label: entry.name,
-      color: categoryDetails?.color || dynamicColors[index % dynamicColors.length],
+      color: categoryDetails?.color || themeColor || dynamicColors[index % dynamicColors.length],
     };
     return acc;
   }, {} as ChartConfig);
@@ -85,22 +116,24 @@ export default function CategoryPieChart({ timeRange }: CategoryPieChartProps) {
             cx="50%"
             cy="50%"
             outerRadius={100}
-            fill="#8884d8"
+            fill="#8884d8" // Default fill, overridden by Cell
             labelLine={false}
             label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
               const RADIAN = Math.PI / 180;
+              // only show label if percent > 5% to avoid clutter
+              if ((percent * 100) <= 5) return null; 
               const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-              const x = cx + radius * Math.cos(-midAngle * RADIAN);
-              const y = cy + radius * Math.sin(-midAngle * RADIAN);
-              return (percent * 100) > 5 ? ( // Only show label if percent > 5%
-                <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="10px">
-                  {`${(percent * 100).toFixed(0)}%`}
+              const x = cx + (radius + 10) * Math.cos(-midAngle * RADIAN); // Position label outside a bit
+              const y = cy + (radius + 10) * Math.sin(-midAngle * RADIAN);
+              return (
+                <text x={x} y={y} fill={chartConfig[chartData[index].name]?.color || "hsl(var(--foreground))"} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="10px">
+                  {`${chartData[index].name} (${(percent * 100).toFixed(0)}%)`}
                 </text>
-              ) : null;
+              );
             }}
           >
             {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={chartConfig[entry.name]?.color || dynamicColors[index % dynamicColors.length]} />
+              <Cell key={`cell-${index}`} fill={chartConfig[entry.name]?.color} />
             ))}
           </Pie>
           <Legend />

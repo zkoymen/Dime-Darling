@@ -1,8 +1,9 @@
+
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import SpendingChart from "@/components/dashboard/spending-chart"; // Re-use for now
+// import SpendingChart from "@/components/dashboard/spending-chart"; // No longer used here
 import CategoryPieChart from "@/components/reports/category-pie-chart";
 import IncomeVsExpenseChart from "@/components/reports/income-vs-expense-chart";
 import TrendChart from "@/components/reports/trend-chart";
@@ -11,10 +12,8 @@ import { useState } from "react";
 export default function ReportsPage() {
   const [timeRange, setTimeRange] = useState("last6months");
 
-  // This would typically fetch data based on timeRange
   const handleTimeRangeChange = (value: string) => {
     setTimeRange(value);
-    // console.log("Fetching data for:", value);
   };
 
   return (
@@ -52,9 +51,9 @@ export default function ReportsPage() {
               <CardTitle>Financial Overview</CardTitle>
               <CardDescription>A summary of your financial activity for the selected period.</CardDescription>
             </CardHeader>
-            <CardContent>
-              {/* Re-using dashboard chart for now, ideally a specific overview chart */}
-              <SpendingChart /> 
+            <CardContent className="pl-2">
+              {/* Using IncomeVsExpenseChart for a dynamic overview */}
+              <IncomeVsExpenseChart timeRange={timeRange} /> 
             </CardContent>
           </Card>
         </TabsContent>
