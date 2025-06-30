@@ -19,8 +19,28 @@ Dime Darling is a personal finance tracker application designed to help users ma
 - **Firebase:** Backend services including Authentication and Firestore.
 - **Zustand:** State management solution.
 
-## Getting Started
+## Screenshots from the Demo
 
-To get a local copy up and running, follow these steps:
+![Screenshot 2025-06-30 222046](https://github.com/user-attachments/assets/5032680a-3b2e-4637-936f-8d1805bc4894)
 
-1.  **Clone the repository:**
+
+![Screenshot 2025-06-30 221307](https://github.com/user-attachments/assets/a05f9f5b-2b71-4730-a030-a163e39bc21e)
+
+
+![Screenshot 2025-06-30 221805](https://github.com/user-attachments/assets/763c11a0-0b05-46f4-aa6c-b30d816bf464)
+
+
+![Screenshot 2025-06-30 221815](https://github.com/user-attachments/assets/a11516c1-15bb-4495-8114-9c57a5ee0cf7)
+
+
+![Screenshot 2025-06-30 222012](https://github.com/user-attachments/assets/b422e196-4bbd-4c10-be88-39f6cdf1ee86)
+
+
+![Screenshot 2025-06-30 222123](https://github.com/user-attachments/assets/d7b2a6a2-7167-4394-946b-3fa44767f846)
+
+
+**Financial Reports** : Visualise the expenses and incomes through various presentation graphs.
+![Screenshot 2025-06-30 222209](https://github.com/user-attachments/assets/a2eae593-f903-4895-8eab-06f7951cd754)
+
+
+![Screenshot 2025-06-30 222241](https://github.com/user-attachments/assets/eabf024e-e16a-44d6-a2ce-528ea1528e31)
